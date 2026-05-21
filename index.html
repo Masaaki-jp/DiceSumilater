@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ちんちろサイコロシミュレーター</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+
+        /* サイコロを振るエリア */
+        .dice-container {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        /* サイコロのベース（4バイトの絵文字フォント） */
+        .dice {
+            font-size: 80px;
+            user-select: none;
+            display: inline-block;
+            transition: transform 0.1s ease;
+        }
+
+        /* 🎲が回転するCSSアニメーション（スマホのパワーで描画） */
+        .rolling {
+            animation: roll-animation 0.6s linear infinite;
+        }
+
+        @keyframes roll-animation {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); } /* 少し浮き上がる */
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        /* 決定ボタン */
+        button {
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dice-container">
+        <!-- 初期状態は 🎲 の絵文字（4バイト単体なので安全） -->
+        <div id="dice1" class="dice">🎲</div>
+        <div id="dice2" class="dice">🎲</div>
+    </div>
+
+    <button id="roll-btn" onclick="playChinchiro()">サイコロを振る</button>
+
+<script>
+    // サイコロの出目（3バイトのUnicode記号フォント群）
+    // 配列のインデックス（0〜5）と、実際の出目（1〜6）を対応させます
+    const diceFaces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+
+    function playChinchiro() {
+        const btn = document.getElementById('roll-btn');
+        const d1 = document.getElementById('dice1');
+        const d2 = document.getElementById('dice2');
+
+        // 連打防止：アニメーション中はボタンを無効化
+        btn.disabled = true;
+
+        // 1. まずは共通の「🎲」にして、CSSアニメーション（回転）を開始
+        d1.textContent = "🎲";
+        d2.textContent = "🎲";
+        d1.classList.add('rolling');
+        d2.classList.add('rolling');
+
+        // 通信型ゲームを想定：ここでサーバーから「出目データ」を数バイトで受け取るイメージ
+        // 今回はサンプルなので、フロント側で1〜6の乱数を2つ生成（擬似通信データ）
+        const serverResult = {
+            dice1: Math.floor(Math.random() * 6) + 1, // 1〜6
+            dice2: Math.floor(Math.random() * 6) + 1  // 1〜6
+        };
+
+        // 2. 0.6秒（アニメーション1周分）回したあとに、結果の絵文字へ差し替える
+        setTimeout(() => {
+            // 回転アニメーションをストップ
+            d1.classList.remove('rolling');
+            d2.classList.remove('rolling');
+
+            // サーバーから届いた数字（1〜6）を、対応するサイコロの目の記号に変換して表示
+            // 配列は0から始まるので -1 しているのがポイントです
+            d1.textContent = diceFaces[serverResult.dice1 - 1];
+            d2.textContent = diceFaces[serverResult.dice2 - 1];
+
+            // 演出として、確定した瞬間にちょっとだけピクッと動かす
+            d1.style.transform = "scale(1.2)";
+            d2.style.transform = "scale(1.2)";
+            setTimeout(() => {
+                d1.style.transform = "scale(1)";
+                d2.style.transform = "scale(1)";
+                btn.disabled = false; // ボタンを再度有効化
+            }, 100);
+
+            // コンソールに出力（通信ログのシミュレート用）
+            console.log(`サーバー受信データ量: 約20バイト | 出目: [${serverResult.dice1}, ${serverResult.dice2}]`);
+        }, 600); 
+    }
+</script>
+</body>
+</html>
